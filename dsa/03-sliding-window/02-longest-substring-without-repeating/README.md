@@ -45,7 +45,7 @@ Given a string `s`, find the length of the longest substring without repeating c
 
 ## Key Insights
 - Sliding window maintains current substring without repeats
-- HashMap tracks last seen positions for O(1) lookups
+- Array/HashMap tracks last seen positions for O(1) lookups
 - When repeat found, slide left pointer past previous occurrence
 
 ## Approach Details
