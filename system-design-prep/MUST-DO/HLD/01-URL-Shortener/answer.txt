@@ -1,0 +1,450 @@
+Good. Let’s do this **like a real 5-year backend/system design interview**, not textbook.
+Take **URL Shortener (like Bitly)**.
+
+When interviewer asks system design, think in **production mindset**, not just drawing boxes.
+
+---
+
+# Problem: Design URL Shortener
+
+Example:
+
+```text id="u1"
+https://amazon.in/products/mobile/iphone15/details
+↓
+https://bit.ly/abc123
+```
+
+Need:
+
+* Generate short URL
+* Redirect fast
+* Handle millions of requests
+* Highly available
+
+---
+
+# 1) What things we need to take care of while designing?
+
+(First thing you say in interview)
+
+I always divide into **functional + non-functional requirements**.
+
+## Functional Requirements
+
+System should:
+
+* Generate unique short URL
+* Redirect short URL → original URL
+* Support expiration (optional)
+* Support analytics (click count, geo, device)
+* Custom alias support (`bit.ly/shivani`)
+
+---
+
+## Non Functional Requirements (Very important)
+
+Need to think about:
+
+### a) Low latency
+
+Redirect should happen in **milliseconds**.
+
+Solution:
+
+* Redis cache
+
+---
+
+### b) High availability
+
+If DB fails, service should still work.
+
+Solution:
+
+* Replication
+* Load balancer
+
+---
+
+### c) Scalability
+
+Can handle millions of redirects.
+
+Example:
+
+```text id="u2"
+10 million users/day
+100 million redirects/day
+```
+
+Need:
+
+* Horizontal scaling
+
+---
+
+### d) Uniqueness
+
+Must avoid duplicate short URLs.
+
+Need:
+
+* Unique ID generation
+
+---
+
+### e) Database growth
+
+Can become huge.
+
+Example:
+
+```text id="u3"
+500 million URLs stored
+```
+
+Need:
+
+* Sharding
+
+---
+
+### f) Security
+
+Prevent spam/malicious URLs.
+
+Need:
+
+* URL validation
+* Abuse detection
+
+---
+
+### g) Read heavy system
+
+Example:
+
+```text id="u4"
+Write = 10K/day
+Read = 50M/day
+```
+
+Need:
+
+* Aggressive caching
+
+---
+
+Interview line:
+
+**“First I identify functional requirements like short URL generation and redirection, then non-functional requirements like low latency, uniqueness, high availability, scalability, and handling read-heavy traffic.”**
+
+---
+
+# 2) Components we use and WHY
+
+Now go component by component.
+
+---
+
+## A. Load Balancer
+
+Example: NGINX
+
+Why?
+
+Multiple app servers.
+
+```text id="u5"
+Client
+↓
+Load Balancer
+↓
+App Server 1
+App Server 2
+App Server 3
+```
+
+Without LB:
+
+One server overloads.
+
+---
+
+## B. API Service
+
+Built using Spring Boot
+
+Endpoints:
+
+```text id="u6"
+POST /shorten
+GET /{shortCode}
+```
+
+Why?
+
+Handle business logic.
+
+Responsibilities:
+
+* Validate URL
+* Generate short code
+* Save mapping
+
+---
+
+## C. Unique ID Generator Service
+
+Need unique short code.
+
+Problem:
+
+```text id="u7"
+2 users generate same code
+```
+
+Solutions:
+
+### Option 1 → Base62 encoding
+
+```text id="u8"
+DB id = 12567
+
+Base62 = AbC9
+```
+
+Why?
+
+Short and unique.
+
+---
+
+### Option 2 → Distributed ID generator
+
+Example:
+
+Twitter Snowflake algorithm
+
+Why?
+
+Avoid DB bottleneck.
+
+---
+
+## D. Database
+
+Can use:
+
+MySQL
+
+Store:
+
+```text id="u9"
+ShortCode | OriginalURL | CreatedAt | ExpiryDate
+```
+
+Why SQL?
+
+Need exact mapping.
+
+Example:
+
+```text id="u10"
+abc123 → amazon.com/iphone
+```
+
+---
+
+## E. Cache Layer
+
+Use:
+
+Redis
+
+Why?
+
+Redirect API is read heavy.
+
+Without cache:
+
+```text id="u11"
+Every request → DB hit
+```
+
+Bad.
+
+With cache:
+
+```text id="u12"
+Request
+↓
+Redis hit
+↓
+Return original URL
+```
+
+Latency becomes:
+
+```text id="u13"
+2ms instead of 50ms
+```
+
+---
+
+## F. Message Queue
+
+Use:
+
+Apache Kafka
+
+Why?
+
+Analytics tracking asynchronously.
+
+Example:
+
+```text id="u14"
+User clicks URL
+↓
+Redirect immediately
+↓
+Send click event to Kafka
+↓
+Analytics service consumes
+```
+
+Why async?
+
+User should not wait.
+
+---
+
+## G. Analytics Service
+
+Store:
+
+* Click count
+* Country
+* Browser
+* Device
+
+Why separate service?
+
+Avoid slowing redirect API.
+
+---
+
+## H. Database Sharding
+
+Problem:
+
+```text id="u15"
+500 million records
+```
+
+Single DB slow.
+
+Solution:
+
+```text id="u16"
+Shard 1 → A-F
+Shard 2 → G-M
+Shard 3 → N-Z
+```
+
+Why?
+
+Scale storage.
+
+---
+
+## I. CDN (optional advanced answer)
+
+Use CDN for redirect caching.
+
+Example:
+
+Cloudflare
+
+Why?
+
+Global low latency.
+
+---
+
+# 3) Architecture Diagram
+
+Say this in interview.
+
+```text id="u17"
+                Client
+                   |
+                   |
+           Load Balancer
+                   |
+      -------------------------
+      |                       |
+ URL Shortener API      Redirect API
+(Spring Boot)          (Spring Boot)
+      |                       |
+      |                 Check Redis Cache
+      |                       |
+ Generate Short Code          |
+      |                       |
+ Save Mapping                Cache Miss
+      |                       |
+    MySQL  <-------------------
+      |
+      |
+ Publish Event
+      |
+    Kafka
+      |
+ Analytics Service
+      |
+ Analytics DB
+```
+
+Redirect flow:
+
+```text id="u18"
+Short URL request
+↓
+Check Redis
+↓
+If found → redirect immediately
+↓
+Else query DB
+↓
+Store in Redis
+↓
+Redirect user
+↓
+Publish analytics event to Kafka
+```
+
+---
+
+# Production-level concerns (5 year answer)
+
+Mention these — interviewers notice seniority.
+
+* Cache eviction strategy
+* Rate limiting abuse/spam
+* Database replication
+* Short URL collision handling
+* Retry mechanism
+* Circuit breaker if DB down
+* Monitoring → Prometheus + Grafana
+* CDN for global traffic
+* Eventual consistency for analytics
+
+---
+
+Strong closing line:
+
+**“Since URL shortener is extremely read-heavy, I would optimize redirect latency using Redis caching, use distributed ID generation for uniqueness, offload analytics asynchronously through Kafka, and shard the database when data grows significantly.”**
+
+This is the level expected in **5+ year product company interviews**.
