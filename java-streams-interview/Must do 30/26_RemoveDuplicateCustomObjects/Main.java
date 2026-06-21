@@ -203,7 +203,7 @@ public class Main {
 }
 
 practice
-    class Main {
+ class Main {
     public static void main(String[] args) {
         // System.out.println("Find first non repeating character");
        List<Employee> employees1 = Arrays.asList(
@@ -217,10 +217,11 @@ practice
                  
        System.out.println("Output:removeDuplicateDistinct " + removeDuplicateDistinct(employees1));
        
-        System.out.println("Output:removeDuplicatesByValue " + removeDuplicatesByValue(employees1));
+       System.out.println("Output:removeDuplicatesByValue " + removeDuplicatesByValue(employees1));
         
-          System.out.println("Output:removeDuplicatesByKey " + removeDuplicatesByKey(employees1,Employee::getId));
+       System.out.println("Output:removeDuplicatesByKey " + removeDuplicatesByKey(employees1,Employee::getId));
        
+       System.out.println("Output:removeDuplicatesByKeyPredicate " + removeDuplicatesByKeyPredicate(employees1,Employee::getName,emp -> emp.getName().length() > 3));
     }
     
   
@@ -257,6 +258,23 @@ practice
                 .stream()
                 .collect(Collectors.toList());
     }
+    public static <T> List<T> removeDuplicatesByKeyPredicate(
+        List<T> list,
+        Function<T, ?> keyExtractor,
+        Predicate<T> condition) {
+
+    return list.stream()
+            .filter(condition)     // apply condition first
+            .collect(Collectors.toMap(
+                    keyExtractor,
+                    t -> t,
+                    (t1, t2) -> t1,
+                    LinkedHashMap::new   // preserve order
+            ))
+            .values()
+            .stream()
+            .collect(Collectors.toList());
+}
     
     
     /**
@@ -265,6 +283,7 @@ practice
 Output:removeDuplicateDistinct [E(1,Alise), E(2,Bob), E(3,Alise), E(4,charlie)]
 Output:removeDuplicatesByValue [E(1,Alise), E(2,Bob), E(4,charlie)]
 Output:removeDuplicatesByKey [E(1,Alise), E(2,Bob), E(3,Alise), E(4,charlie)]
+Output:removeDuplicatesByKeyPredicate [E(1,Alise), E(4,charlie)]
 
      * 
      */
