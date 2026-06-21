@@ -201,3 +201,72 @@ public class Main {
         System.out.println("Output: " + removeDuplicates(employees8));
     }
 }
+
+practice
+    class Main {
+    public static void main(String[] args) {
+        // System.out.println("Find first non repeating character");
+       List<Employee> employees1 = Arrays.asList(
+           new Employee(1,"Alise"),
+           new Employee(2,"Bob"),
+           new Employee(3,"Alise"),
+           new Employee(4,"charlie"),
+           new Employee(2,"Bob")
+       );
+       System.out.println("Output: removeDuplicates" + removeDuplicates(employees1));
+                 
+       System.out.println("Output:removeDuplicateDistinct " + removeDuplicateDistinct(employees1));
+       
+        System.out.println("Output:removeDuplicatesByValue " + removeDuplicatesByValue(employees1));
+        
+          System.out.println("Output:removeDuplicatesByKey " + removeDuplicatesByKey(employees1,Employee::getId));
+       
+    }
+    
+  
+  public static <T> List<T> removeDuplicates(List<T> list){
+      return list.stream()
+      .collect(Collectors.toCollection(LinkedHashSet::new))
+      .stream().collect(Collectors.toList());
+  }
+  
+  public static <T> List<T> removeDuplicateDistinct(List<T> list){
+      return list.stream()
+      .distinct()
+      .collect(Collectors.toList());
+  }
+  
+  public static List<Employee> removeDuplicatesByValue(List<Employee> employee){
+      return employee.stream()
+      .collect(Collectors.toMap(
+          Employee::getName,
+          emp->emp,
+          (emp1,emp2)->emp1,
+           LinkedHashMap::new 
+          )).values().stream().collect(Collectors.toList());
+  }
+   public static <T> List<T> removeDuplicatesByKey(List<T> list, 
+                                                     java.util.function.Function<T, ?> keyExtractor) {
+        return list.stream()
+                .collect(Collectors.toMap(
+                        keyExtractor,
+                        t -> t,
+                        (t1, t2) -> t1
+                ))
+                .values()
+                .stream()
+                .collect(Collectors.toList());
+    }
+    
+    
+    /**
+     * 
+     Output: removeDuplicates[E(1,Alise), E(2,Bob), E(3,Alise), E(4,charlie)]
+Output:removeDuplicateDistinct [E(1,Alise), E(2,Bob), E(3,Alise), E(4,charlie)]
+Output:removeDuplicatesByValue [E(1,Alise), E(2,Bob), E(4,charlie)]
+Output:removeDuplicatesByKey [E(1,Alise), E(2,Bob), E(3,Alise), E(4,charlie)]
+
+     * 
+     */
+    
+}
